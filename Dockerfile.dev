@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /usr/src/app
+ENV CHOKIDAR_USEPOLLING=true
+
+COPY package*.json ./
+RUN npm ci
+
+COPY nest-cli.json tsconfig*.json ./
+COPY src ./src
+
+RUN mkdir -p /app/dist && chown -R node:node /app
+USER node
+
+EXPOSE 3000
+CMD ["npm", "run", "start:dev"]

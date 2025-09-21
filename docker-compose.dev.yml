@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: booking_nest_api_dev
+    env_file:
+      - .env.dev
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: booking_nest_db_dev
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    command: ["mongod", "--quiet", "--logpath", "/dev/null", "--bind_ip_all"]
+    restart: unless-stopped
+volumes:
+  mongo_data:
+    name: booking_nest_mongo_data_dev
+  
