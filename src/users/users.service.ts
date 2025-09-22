@@ -45,9 +45,28 @@ export class UsersService {
     };
   }
 
-  async findByEmailOrUsername(emailOrUsername: string): Promise<UserDocument | null> {
+  async findByEmailOrUsername(
+    emailOrUsername: string,
+  ): Promise<UserDocument | null> {
     return this.userModel.findOne({
-      $or: [{ email: emailOrUsername.toLowerCase() }, { username: emailOrUsername.toLowerCase() }],
+      $or: [
+        { email: emailOrUsername.toLowerCase() },
+        { username: emailOrUsername.toLowerCase() },
+      ],
     });
+  }
+
+  async getUserProfile(userId: string): Promise<UserProfileResponseDto> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    return {
+      id: (user._id as Types.ObjectId).toString(),
+      email: user.email,
+      username: user.username,
+      avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt.toISOString(),
+    };
   }
 }
