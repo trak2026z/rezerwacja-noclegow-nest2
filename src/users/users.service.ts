@@ -44,4 +44,10 @@ export class UsersService {
       createdAt: user.createdAt.toISOString(),
     };
   }
+
+  async findByEmailOrUsername(emailOrUsername: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({
+      $or: [{ email: emailOrUsername.toLowerCase() }, { username: emailOrUsername.toLowerCase() }],
+    });
+  }
 }
