@@ -3,7 +3,12 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { User } from '../../users/schemas/user.schema';
 
-export type RoomDocument = Room & Document;
+import { Types } from 'mongoose';
+
+export type RoomDocument = Room & Document & {
+  likedBy: Types.ObjectId[];
+  dislikedBy: Types.ObjectId[];
+};
 
 @Schema({ timestamps: true })
 export class Room {
@@ -37,13 +42,13 @@ export class Room {
   likes: number;
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }] })
-  likedBy: User[];
+likedBy: Types.ObjectId[];
 
   @Prop({ default: 0 })
   dislikes: number;
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }] })
-  dislikedBy: User[];
+dislikedBy: Types.ObjectId[];
 
   @Prop({ default: false })
   reserved: boolean;
