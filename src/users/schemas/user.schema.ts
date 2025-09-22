@@ -29,9 +29,6 @@ export class User {
   passwordHash: string;
 
   @Prop()
-  avatarUrl?: string;
-
-  @Prop()
   createdAt: Date;
 
   @Prop()

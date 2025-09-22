@@ -8,6 +8,9 @@ import { UserProfileResponseDto } from './dto/user-profile-response.dto';
 
 import { Types } from 'mongoose';
 
+import { NotFoundException } from '@nestjs/common';
+import { PublicUserProfileDto } from './dto/public-user-profile.dto';
+
 @Injectable()
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
@@ -40,7 +43,6 @@ export class UsersService {
       id: (user._id as Types.ObjectId).toString(),
       email: user.email,
       username: user.username,
-      avatarUrl: user.avatarUrl,
       createdAt: user.createdAt.toISOString(),
     };
   }
@@ -65,8 +67,32 @@ export class UsersService {
       id: (user._id as Types.ObjectId).toString(),
       email: user.email,
       username: user.username,
-      avatarUrl: user.avatarUrl,
       createdAt: user.createdAt.toISOString(),
     };
+  }
+
+  async getPublicProfile(username: string): Promise<PublicUserProfileDto> {
+    const user = await this.userModel.findOne({
+      username: username.toLowerCase(),
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return {
+      username: user.username,
+      createdAt: user.createdAt.toISOString(),
+    };
+  }
+
+  async isEmailAvailable(email: string): Promise<{ available: boolean }> {
+    const exists = await this.userModel.exists({ email: email.toLowerCase() });
+    return { available: !exists };
+  }
+
+  async isUsernameAvailable(username: string): Promise<{ available: boolean }> {
+    const exists = await this.userModel.exists({
+      username: username.toLowerCase(),
+    });
+    return { available: !exists };
   }
 }
