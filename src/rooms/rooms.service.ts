@@ -11,6 +11,9 @@ import { RoomResponseDto } from './dto/room-response.dto';
 
 import { UpdateRoomDto, PatchRoomDto } from './dto/update-room.dto';
 
+import { ConflictException } from '@nestjs/common';
+import { ReserveRoomDto } from './dto/reserve-room.dto';
+
 @Injectable()
 export class RoomsService {
   constructor(@InjectModel(Room.name) private roomModel: Model<RoomDocument>) {}
@@ -181,12 +184,45 @@ export class RoomsService {
     );
 
     // dodaj dislike tylko jeśli jeszcze nie ma
-    if (!room.dislikedBy.some((u) => u.toString() === userObjectId.toString())) {
+    if (
+      !room.dislikedBy.some((u) => u.toString() === userObjectId.toString())
+    ) {
       room.dislikedBy.push(userObjectId);
     }
 
     room.likes = room.likedBy.length;
     room.dislikes = room.dislikedBy.length;
+
+    const updated = await room.save();
+    return this.toResponseDto(updated);
+  }
+
+  async reserveRoom(
+    roomId: string,
+    userId: string,
+    dto: ReserveRoomDto,
+  ): Promise<RoomResponseDto> {
+    const room = await this.roomModel.findById(roomId);
+    if (!room) throw new NotFoundException('Room not found');
+
+    // 🔒 właściciel nie może rezerwować swojego pokoju
+    const ownerId =
+      room.createdBy instanceof Types.ObjectId
+        ? room.createdBy.toString()
+        : ((room.createdBy as any)._id as Types.ObjectId).toString();
+
+    if (ownerId === userId) {
+      throw new ForbiddenException('Owner cannot reserve own room');
+    }
+
+    if (room.reserved) {
+      throw new ConflictException('Room is already reserved');
+    }
+
+    room.reserved = true;
+    room.reservedBy = new Types.ObjectId(userId);
+    room.startAt = new Date(dto.startAt);
+    room.endsAt = new Date(dto.endsAt);
 
     const updated = await room.save();
     return this.toResponseDto(updated);

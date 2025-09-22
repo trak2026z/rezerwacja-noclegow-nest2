@@ -15,6 +15,18 @@ CHECK_EMAIL_OK=false
 CHECK_USERNAME_OK=false
 USER_PROFILE_OK=false
 
+CREATE_ROOM_OK=false
+CREATE_ROOM_OK2=false
+LIST_ROOMS_OK=false
+GET_ROOM_OK=false
+LIKE_ROOM_OK=false
+DISLIKE_ROOM_OK=false
+DELETE_ROOM_OK=false
+
+RESERVE_OWNER_FORBIDDEN_OK=false
+RESERVE_GUEST_OK=false
+RESERVE_DUPLICATE_CONFLICT_OK=false
+
 # helper: status icon
 function icon() { [[ $1 == true ]] && echo "✅" || echo "❌" }
 
@@ -146,6 +158,132 @@ if [[ $(echo "$BODY" | jq -r .username) == "owner1" ]]; then
 fi
 echo
 
+echo "=== 12. Create Room (as owner) ==="
+curl_json -X POST "${API}/rooms" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${OWNER_TOKEN}" \
+  -d '{
+    "title": "Pokój testowy",
+    "body": "Opis pokoju testowego blisko centrum",
+    "city": "Warszawa",
+    "imgLink": "https://picsum.photos/800/600"
+  }'
+echo "$BODY" | jq .
+ROOM_ID=$(echo "$BODY" | jq -r .id)
+if [[ -n "$ROOM_ID" && "$ROOM_ID" != "null" ]]; then
+  CREATE_ROOM_OK=true
+fi
+echo
+
+
+echo "=== 12a. Create Room (as guest) ==="
+curl_json -X POST "${API}/rooms" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${GUEST_TOKEN}" \
+  -d '{
+    "title": "Pokój testowy",
+    "body": "Opis pokoju testowego blisko centrum",
+    "city": "Warszawa",
+    "imgLink": "https://picsum.photos/800/600"
+  }'
+echo "$BODY" | jq .
+ROOM_ID2=$(echo "$BODY" | jq -r .id)
+if [[ -n "$ROOM_ID2" && "$ROOM_ID2" != "null" ]]; then
+  CREATE_ROOM_OK2=true
+fi
+echo
+
+
+echo "=== 13. List Rooms ==="
+curl_json "${API}/rooms"
+echo "$BODY" | jq .
+if echo "$BODY" | jq -e ".[] | select(.id==\"$ROOM_ID\")" >/dev/null; then
+  LIST_ROOMS_OK=true
+fi
+echo
+
+echo "=== 14. Get Room by ID ==="
+curl_json "${API}/rooms/${ROOM_ID}"
+echo "$BODY" | jq .
+if [[ $(echo "$BODY" | jq -r .id) == "$ROOM_ID" ]]; then
+  GET_ROOM_OK=true
+fi
+echo
+
+echo "=== 16. Like Room (as guest) ==="
+curl_json -X POST "${API}/rooms/${ROOM_ID}/like" \
+  -H "Authorization: Bearer ${GUEST_TOKEN}"
+echo "$BODY" | jq .
+if [[ $(echo "$BODY" | jq -r .likes) -ge 1 ]]; then
+  LIKE_ROOM_OK=true
+fi
+echo
+
+echo "=== 17. Dislike Room (as guest) ==="
+curl_json -X POST "${API}/rooms/${ROOM_ID}/dislike" \
+  -H "Authorization: Bearer ${GUEST_TOKEN}"
+echo "$BODY" | jq .
+if [[ $(echo "$BODY" | jq -r .dislikes) -ge 1 ]]; then
+  DISLIKE_ROOM_OK=true
+fi
+echo
+
+echo "=== 20. Owner tries to reserve own room (403) ==="
+curl_json -X POST "${API}/rooms/${ROOM_ID}/reserve" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${OWNER_TOKEN}" \
+  -d '{
+    "startAt": "2025-09-23T12:00:00Z",
+    "endsAt": "2025-09-24T10:00:00Z"
+  }'
+echo "$BODY" | jq .
+if [[ "$HTTP_CODE" == "403" ]]; then
+  RESERVE_OWNER_FORBIDDEN_OK=true
+fi
+echo
+
+echo "=== 21. Guest reserves room ==="
+curl_json -X POST "${API}/rooms/${ROOM_ID}/reserve" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${GUEST_TOKEN}" \
+  -d '{
+    "startAt": "2025-09-23T12:00:00Z",
+    "endsAt": "2025-09-24T10:00:00Z"
+  }'
+echo "$BODY" | jq .
+if [[ "$HTTP_CODE" == "201" || "$HTTP_CODE" == "200" ]]; then
+  RESERVE_GUEST_OK=true
+fi
+echo
+
+echo "=== 22. Guest tries to reserve again (409) ==="
+curl_json -X POST "${API}/rooms/${ROOM_ID}/reserve" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${GUEST_TOKEN}" \
+  -d '{
+    "startAt": "2025-09-23T12:00:00Z",
+    "endsAt": "2025-09-24T10:00:00Z"
+  }'
+echo "$BODY" | jq .
+if [[ "$HTTP_CODE" == "409" ]]; then
+  RESERVE_DUPLICATE_CONFLICT_OK=true
+fi
+echo
+
+
+echo "=== 18. Delete Room (as owner) ==="
+curl_json -X DELETE "${API}/rooms/${ROOM_ID}" \
+  -H "Authorization: Bearer ${OWNER_TOKEN}"
+echo "HTTP $HTTP_CODE"
+if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "204" ]]; then
+  DELETE_ROOM_OK=true
+fi
+echo
+
+
+
+
+
 # --- SUMMARY ---
 echo "=== SUMMARY ==="
 echo "Health: $(icon $HEALTH_OK)"
@@ -153,3 +291,15 @@ echo "Register: owner=$(icon $REGISTER_OWNER_OK), guest=$(icon $REGISTER_GUEST_O
 echo "Auth Checks: checkEmail=$(icon $CHECK_EMAIL_OK), checkUsername=$(icon $CHECK_USERNAME_OK)"
 echo "Login: owner=$(icon $LOGIN_OWNER_OK), guest=$(icon $LOGIN_GUEST_OK)"
 echo "Profiles: public=$(icon $PUBLIC_PROFILE_OK), currentUser=$(icon $USER_PROFILE_OK)"
+
+echo "=== ROOMS SUMMARY ==="
+echo "CreateRoom: $(icon $CREATE_ROOM_OK)"
+echo "CreateRoom: $(icon $CREATE_ROOM_OK2)"
+echo "ListRooms: $(icon $LIST_ROOMS_OK)"
+echo "GetRoom: $(icon $GET_ROOM_OK)"
+echo "LikeRoom: $(icon $LIKE_ROOM_OK)"
+echo "DislikeRoom: $(icon $DISLIKE_ROOM_OK)"
+
+echo "Reserve: ownerForbidden=$(icon $RESERVE_OWNER_FORBIDDEN_OK), guestOK=$(icon $RESERVE_GUEST_OK), duplicateRejected=$(icon $RESERVE_DUPLICATE_CONFLICT_OK)"
+
+echo "DeleteRoom: $(icon $DELETE_ROOM_OK)"

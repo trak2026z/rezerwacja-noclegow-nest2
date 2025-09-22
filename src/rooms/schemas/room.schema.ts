@@ -5,10 +5,12 @@ import { User } from '../../users/schemas/user.schema';
 
 import { Types } from 'mongoose';
 
-export type RoomDocument = Room & Document & {
-  likedBy: Types.ObjectId[];
-  dislikedBy: Types.ObjectId[];
-};
+export type RoomDocument = Room &
+  Document & {
+    likedBy: Types.ObjectId[];
+    dislikedBy: Types.ObjectId[];
+    reservedBy?: Types.ObjectId;
+  };
 
 @Schema({ timestamps: true })
 export class Room {
@@ -42,19 +44,19 @@ export class Room {
   likes: number;
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }] })
-likedBy: Types.ObjectId[];
+  likedBy: Types.ObjectId[];
 
   @Prop({ default: 0 })
   dislikes: number;
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }] })
-dislikedBy: Types.ObjectId[];
+  dislikedBy: Types.ObjectId[];
 
   @Prop({ default: false })
   reserved: boolean;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
-  reservedBy: User;
+  reservedBy?: User | Types.ObjectId;
 
   @Prop()
   startAt: Date;

@@ -25,7 +25,7 @@ import type { RequestWithUser } from '../common/interfaces/request-with-user.int
 
 import { UpdateRoomDto, PatchRoomDto } from './dto/update-room.dto';
 
-import { RoomReactionResponseDto } from './dto/room-reaction.dto';
+import { ReserveRoomDto } from './dto/reserve-room.dto';
 
 @ApiTags('rooms')
 @Controller('rooms')
@@ -110,5 +110,17 @@ export class RoomsController {
     @Req() req: RequestWithUser,
   ): Promise<RoomResponseDto> {
     return this.roomsService.dislikeRoom(id, req.user.userId);
+  }
+
+  @Post(':id/reserve')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: RoomResponseDto })
+  async reserveRoom(
+    @Param('id') id: string,
+    @Body() dto: ReserveRoomDto,
+    @Req() req: RequestWithUser,
+  ): Promise<RoomResponseDto> {
+    return this.roomsService.reserveRoom(id, req.user.userId, dto);
   }
 }
