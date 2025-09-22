@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Room, RoomDocument } from './schemas/room.schema';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { RoomResponseDto } from './dto/room-response.dto';
+
+import { UpdateRoomDto, PatchRoomDto } from './dto/update-room.dto';
 
 @Injectable()
 export class RoomsService {
@@ -57,5 +59,52 @@ export class RoomsService {
       startAt: room.startAt ? room.startAt.toISOString() : undefined,
       endsAt: room.endsAt ? room.endsAt.toISOString() : undefined,
     };
+  }
+
+async updateRoom(id: string, dto: UpdateRoomDto, userId: string): Promise<RoomResponseDto> {
+  const room = await this.roomModel.findById(id);
+  if (!room) throw new NotFoundException('Room not found');
+  if (room.createdBy.toString() !== userId) throw new ForbiddenException('You are not the owner of this room');
+
+  // PUT – pełna aktualizacja
+  room.title = dto.title;
+  room.body = dto.body;
+  room.city = dto.city;
+  room.imgLink = dto.imgLink ?? room.imgLink;
+  room.startAt = dto.startAt ? new Date(dto.startAt) : undefined as any;
+  room.endsAt = dto.endsAt ? new Date(dto.endsAt) : undefined as any;
+
+  const updated = await room.save();
+  return this.toResponseDto(updated);
+}
+
+async patchRoom(id: string, dto: PatchRoomDto, userId: string): Promise<RoomResponseDto> {
+  const room = await this.roomModel.findById(id);
+  if (!room) throw new NotFoundException('Room not found');
+  if (room.createdBy.toString() !== userId) throw new ForbiddenException('You are not the owner of this room');
+
+  // PATCH – tylko pola, które przyszły
+  if (dto.title) room.title = dto.title;
+  if (dto.body) room.body = dto.body;
+  if (dto.city) room.city = dto.city;
+  if (dto.imgLink) room.imgLink = dto.imgLink;
+  if (dto.startAt) room.startAt = new Date(dto.startAt);
+  if (dto.endsAt) room.endsAt = new Date(dto.endsAt);
+
+  const updated = await room.save();
+  return this.toResponseDto(updated);
+}
+
+  async deleteRoom(id: string, userId: string): Promise<void> {
+    const room = await this.roomModel.findById(id);
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    if (room.createdBy.toString() !== userId) {
+      throw new ForbiddenException('You are not the owner of this room');
+    }
+
+    await this.roomModel.deleteOne({ _id: id });
   }
 }
