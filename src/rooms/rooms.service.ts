@@ -100,7 +100,6 @@ export class RoomsService {
     if (room.createdBy.toString() !== userId)
       throw new ForbiddenException('You are not the owner of this room');
 
-    // PATCH – tylko pola, które przyszły
     if (dto.title) room.title = dto.title;
     if (dto.body) room.body = dto.body;
     if (dto.city) room.city = dto.city;
@@ -143,16 +142,13 @@ export class RoomsService {
 
     const userObjectId = new Types.ObjectId(userId);
 
-    // zabezpieczenie na wypadek undefined
     room.likedBy = room.likedBy ?? [];
     room.dislikedBy = room.dislikedBy ?? [];
 
-    // usuń ewentualny dislike
     room.dislikedBy = room.dislikedBy.filter(
       (u) => u.toString() !== userObjectId.toString(),
     );
 
-    // dodaj like tylko jeśli jeszcze nie ma
     if (!room.likedBy.some((u) => u.toString() === userObjectId.toString())) {
       room.likedBy.push(userObjectId);
     }
@@ -174,16 +170,13 @@ export class RoomsService {
 
     const userObjectId = new Types.ObjectId(userId);
 
-    // zabezpieczenie na wypadek undefined
     room.likedBy = room.likedBy ?? [];
     room.dislikedBy = room.dislikedBy ?? [];
 
-    // usuń ewentualny like
     room.likedBy = room.likedBy.filter(
       (u) => u.toString() !== userObjectId.toString(),
     );
 
-    // dodaj dislike tylko jeśli jeszcze nie ma
     if (
       !room.dislikedBy.some((u) => u.toString() === userObjectId.toString())
     ) {
@@ -205,7 +198,6 @@ export class RoomsService {
     const room = await this.roomModel.findById(roomId);
     if (!room) throw new NotFoundException('Room not found');
 
-    // 🔒 właściciel nie może rezerwować swojego pokoju
     const ownerId =
       room.createdBy instanceof Types.ObjectId
         ? room.createdBy.toString()

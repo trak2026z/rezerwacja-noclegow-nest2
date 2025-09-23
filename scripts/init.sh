@@ -274,6 +274,6 @@ export class HealthResponseDto {
 }
 EOF
 
-echo "✅ Projekt $PROJECT gotowy. Uruchom:"
+echo "Projekt $PROJECT gotowy. Uruchom:"
 echo "   cd $PROJECT"
 echo "   ./reset-dev.sh"

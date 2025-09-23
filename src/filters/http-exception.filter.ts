@@ -14,7 +14,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse();
     const request = ctx.getRequest();
 
-    if (exception instanceof MongoServerError && (exception as any).code === 11000) {
+    if (
+      exception instanceof MongoServerError &&
+      (exception as any).code === 11000
+    ) {
       return response.status(HttpStatus.CONFLICT).json({
         statusCode: HttpStatus.CONFLICT,
         error: 'Conflict',
