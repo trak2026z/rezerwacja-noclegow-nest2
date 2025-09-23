@@ -280,6 +280,60 @@ if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "204" ]]; then
 fi
 echo
 
+echo "=== 23. Invalid Register (short password) ==="
+curl_json -X POST "${API}/users/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"bad@example.com","username":"baduser","password":"x"}'
+echo "$BODY" | jq .
+if [[ "$HTTP_CODE" == "400" ]]; then
+  echo "✅ Invalid register rejected"
+else
+  echo "❌ Invalid register NOT rejected (HTTP $HTTP_CODE)"
+fi
+echo
+
+echo "=== 24. Login fail (wrong password) ==="
+curl_json -X POST "${API}/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"emailOrUsername":"owner1","password":"wrongpass"}'
+echo "$BODY" | jq .
+if [[ "$HTTP_CODE" == "401" ]]; then
+  echo "✅ Wrong password rejected"
+else
+  echo "❌ Wrong password NOT rejected (HTTP $HTTP_CODE)"
+fi
+echo
+
+echo "=== 25. Profile without token ==="
+curl_json "${API}/users/profile"
+echo "$BODY" | jq .
+if [[ "$HTTP_CODE" == "401" ]]; then
+  echo "✅ Unauthorized profile blocked"
+else
+  echo "❌ Unauthorized profile NOT blocked (HTTP $HTTP_CODE)"
+fi
+echo
+
+echo "=== 26. Get non-existent room ==="
+curl_json "${API}/rooms/nonexistent123"
+echo "$BODY" | jq .
+if [[ "$HTTP_CODE" == "404" ]]; then
+  echo "✅ Non-existent room returns 404"
+else
+  echo "❌ Non-existent room did not return 404 (HTTP $HTTP_CODE)"
+fi
+echo
+
+echo "=== 27. Guest tries to delete owner's room ==="
+curl_json -X DELETE "${API}/rooms/${ROOM_ID}" \
+  -H "Authorization: Bearer ${GUEST_TOKEN}"
+echo "$BODY" | jq .
+if [[ "$HTTP_CODE" == "403" ]]; then
+  echo "✅ Guest cannot delete owner's room"
+else
+  echo "❌ Guest delete NOT blocked (HTTP $HTTP_CODE)"
+fi
+echo
 
 
 
